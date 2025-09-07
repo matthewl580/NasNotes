@@ -10,4 +10,5 @@ export type Note = {
   createdAt: string;
   updatedAt:string;
   zIndex: number;
+  userId: string;
 };

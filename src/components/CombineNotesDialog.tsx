@@ -16,12 +16,13 @@ import { useToast } from "@/hooks/use-toast";
 import { combineNotes } from "@/ai/flows/combine-notes";
 import type { Note } from "@/lib/types";
 import { Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 interface CombineNotesDialogProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   notes: Note[];
-  onNoteAdd: (note: Note) => void;
+  onNoteAdd: (note: Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'position' | 'zIndex' | 'userId'>) => void;
 }
 
 export function CombineNotesDialog({
@@ -33,6 +34,7 @@ export function CombineNotesDialog({
   const [selectedNotes, setSelectedNotes] = useState<Note[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
     if (!isOpen) {
@@ -49,6 +51,14 @@ export function CombineNotesDialog({
   };
 
   const handleCombine = async () => {
+    if (!user) {
+        toast({
+            title: "Authentication required",
+            description: "You need to be signed in to combine notes.",
+            variant: "destructive",
+        });
+        return;
+    }
     if (selectedNotes.length < 2) {
       toast({
         title: "Not enough notes",
@@ -65,17 +75,12 @@ export function CombineNotesDialog({
       }));
       const result = await combineNotes({ notes: notesToCombine });
 
-      const newNote: Note = {
-        id: new Date().toISOString(),
+      onNoteAdd({
         title: "Combined Note",
         content: result.summary,
         color: "bg-yellow-100",
-        position: { x: Math.random() * 200 + 50, y: Math.random() * 200 + 150 },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        zIndex: 1000, // High z-index to appear on top
-      };
-      onNoteAdd(newNote);
+      });
+      
       toast({
         title: "Notes Combined",
         description: "A new note has been created with the combined summary.",

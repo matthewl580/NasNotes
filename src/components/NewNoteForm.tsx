@@ -10,7 +10,7 @@ import { Plus } from "lucide-react";
 
 interface NewNoteFormProps {
   onAdd: (
-    note: Omit<Note, "id" | "createdAt" | "updatedAt" | "position" | "zIndex">
+    note: Omit<Note, "id" | "createdAt" | "updatedAt" | "position" | "zIndex" | "userId">
   ) => void;
   defaultPosition: { x: number; y: number };
 }

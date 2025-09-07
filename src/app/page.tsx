@@ -1,98 +1,99 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import type { Note } from "@/lib/types";
 import { NoteCard } from "@/components/NoteCard";
 import { NewNoteForm } from "@/components/NewNoteForm";
 import { Header } from "@/components/Header";
-
-const initialNotes: Note[] = [
-  {
-    id: "1",
-    title: "Welcome to Nasnotes!",
-    content:
-      "This is your first note. You can edit, delete, drag, and customize it. Try adding an image or a drawing!",
-    color: "bg-amber-100",
-    position: { x: 100, y: 200 },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    zIndex: 1,
-  },
-  {
-    id: "2",
-    title: "Features",
-    content:
-      "- Draggable notes\n- Color customization\n- Image & Drawing embeds\n- AI Summarization & Combination",
-    color: "bg-sky-100",
-    position: { x: 500, y: 250 },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    zIndex: 2,
-  },
-];
+import { useAuth } from "@/hooks/use-auth";
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  writeBatch,
+  getDocs,
+} from "firebase/firestore";
+import { firestore } from "@/lib/firebase";
 
 export default function Home() {
   const [notes, setNotes] = useState<Note[]>([]);
-  const [isClient, setIsClient] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const draggedNoteRef =
     useRef<{ id: string; offset: { x: number; y: number } } | null>(null);
 
-  useEffect(() => {
-    setIsClient(true);
-    const savedNotes = localStorage.getItem("nasnotes");
-    if (savedNotes) {
-      setNotes(JSON.parse(savedNotes));
-    } else {
-      setNotes(initialNotes);
-    }
-  }, []);
+  const { user, loading } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
-    if (isClient) {
-      localStorage.setItem("nasnotes", JSON.stringify(notes));
+    if (!loading && !user) {
+      router.push("/signin");
     }
-  }, [notes, isClient]);
+  }, [user, loading, router]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const notesCollection = collection(firestore, "notes");
+    const q = query(notesCollection, where("userId", "==", user.uid));
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const notesData: Note[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        notesData.push({
+          id: doc.id,
+          ...data,
+          position: data.position || { x: 100, y: 100 },
+          zIndex: data.zIndex || 0,
+        } as Note);
+      });
+      setNotes(notesData);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
 
   const bringToFront = (id: string) => {
-    setNotes((prevNotes) => {
-      const maxZIndex = Math.max(0, ...prevNotes.map((n) => n.zIndex));
-      return prevNotes.map((n) =>
-        n.id === id ? { ...n, zIndex: maxZIndex + 1 } : n
-      );
-    });
+    const noteRef = doc(firestore, "notes", id);
+    const maxZIndex = Math.max(0, ...notes.map((n) => n.zIndex || 0));
+    updateDoc(noteRef, { zIndex: maxZIndex + 1 });
   };
 
-  const addNote = (
+  const addNote = async (
     newNoteData: Omit<
       Note,
-      "id" | "createdAt" | "updatedAt" | "position" | "zIndex"
+      "id" | "createdAt" | "updatedAt" | "position" | "zIndex" | "userId"
     >
   ) => {
+    if (!user) return;
+
     const maxZIndex = Math.max(0, ...notes.map((n) => n.zIndex));
-    const newNote: Note = {
+    const newNote: Omit<Note, "id"> = {
       ...newNoteData,
-      id: new Date().toISOString(),
+      userId: user.uid,
       position: { x: 200, y: 150 },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      zIndex: maxZIndex + 2, // +2 to be above new note form
+      zIndex: maxZIndex + 2,
     };
-    setNotes([...notes, newNote]);
+    await addDoc(collection(firestore, "notes"), newNote);
   };
 
-  const updateNote = (updatedNote: Partial<Note> & { id: string }) => {
-    setNotes(
-      notes.map((n) =>
-        n.id === updatedNote.id
-          ? { ...n, ...updatedNote, updatedAt: new Date().toISOString() }
-          : n
-      )
-    );
+  const updateNote = async (updatedNote: Partial<Note> & { id: string }) => {
+    const { id, ...data } = updatedNote;
+    const noteRef = doc(firestore, "notes", id);
+    await updateDoc(noteRef, { ...data, updatedAt: new Date().toISOString() });
   };
 
-  const deleteNote = (id: string) => {
-    setNotes(notes.filter((n) => n.id !== id));
+  const deleteNote = async (id: string) => {
+    const noteRef = doc(firestore, "notes", id);
+    await deleteDoc(noteRef);
   };
 
   const handleMouseDown = (e: React.MouseEvent, id: string) => {
@@ -127,9 +128,8 @@ export default function Home() {
     let newX = e.clientX - offset.x - containerRect.left;
     let newY = e.clientY - offset.y - containerRect.top;
 
-    // Constrain within viewport
-    newX = Math.max(0, Math.min(newX, containerRect.width - 320)); // 320 is card width
-    newY = Math.max(80, Math.min(newY, containerRect.height - 200)); // approx card height
+    newX = Math.max(0, Math.min(newX, containerRect.width - 320));
+    newY = Math.max(80, Math.min(newY, containerRect.height - 200));
 
     setNotes((prevNotes) =>
       prevNotes.map((n) =>
@@ -138,14 +138,25 @@ export default function Home() {
     );
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUp = async () => {
+    if (draggedNoteRef.current) {
+      const { id } = draggedNoteRef.current;
+      const note = notes.find((n) => n.id === id);
+      if (note) {
+        await updateNote({ id: note.id, position: note.position });
+      }
+    }
     draggedNoteRef.current = null;
     document.removeEventListener("mousemove", handleMouseMove);
     document.removeEventListener("mouseup", handleMouseUp);
   };
 
-  if (!isClient) {
-    return null; // Or a loading spinner
+  if (loading || !user) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center">
+        <p>Loading...</p>
+      </div>
+    );
   }
 
   return (
