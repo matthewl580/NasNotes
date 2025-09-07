@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import type { Note } from "@/lib/types";
 import { NoteCard } from "@/components/NoteCard";
 import { NewNoteForm } from "@/components/NewNoteForm";
@@ -20,6 +19,7 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { firestore } from "@/lib/firebase";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -28,41 +28,91 @@ export default function Home() {
     useRef<{ id: string; offset: { x: number; y: number } } | null>(null);
 
   const { user, loading } = useAuth();
-  const router = useRouter();
+  const { toast } = useToast();
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push("/signin");
-    }
-  }, [user, loading, router]);
+  const getLocalNotes = useCallback((): Note[] => {
+    const localNotes = localStorage.getItem("notes");
+    return localNotes ? JSON.parse(localNotes) : [];
+  }, []);
 
-  useEffect(() => {
-    if (!user) return;
+  const saveLocalNotes = useCallback((notesToSave: Note[]) => {
+    localStorage.setItem("notes", JSON.stringify(notesToSave));
+  }, []);
 
-    const notesCollection = collection(firestore, "notes");
-    const q = query(notesCollection, where("userId", "==", user.uid));
-
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const notesData: Note[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        notesData.push({
-          id: doc.id,
-          ...data,
-          position: data.position || { x: 100, y: 100 },
-          zIndex: data.zIndex || 0,
-        } as Note);
+  const migrateLocalNotesToFirestore = useCallback(async (userId: string) => {
+    const localNotes = getLocalNotes();
+    if (localNotes.length > 0) {
+      const notesCollection = collection(firestore, "notes");
+      const batch = writeBatch(firestore);
+      let noteCount = 0;
+  
+      localNotes.forEach((note) => {
+        // Don't migrate notes that might have been created offline but already have a firestore-like ID
+        if (note.id.length < 10) { 
+          const { id, ...noteData } = note;
+          const newNoteRef = doc(notesCollection);
+          batch.set(newNoteRef, { ...noteData, userId });
+          noteCount++;
+        }
       });
-      setNotes(notesData);
-    });
+  
+      if (noteCount > 0) {
+        await batch.commit();
+        toast({
+          title: "Notes Migrated",
+          description: `${noteCount} local notes have been saved to your account.`,
+        });
+      }
+      localStorage.removeItem("notes");
+    }
+  }, [getLocalNotes, toast]);
 
-    return () => unsubscribe();
-  }, [user]);
+  useEffect(() => {
+    if (loading) return;
+
+    if (user) {
+      migrateLocalNotesToFirestore(user.uid);
+      const notesCollection = collection(firestore, "notes");
+      const q = query(notesCollection, where("userId", "==", user.uid));
+
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const notesData: Note[] = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          notesData.push({
+            id: doc.id,
+            ...data,
+            position: data.position || { x: 100, y: 100 },
+            zIndex: data.zIndex || 0,
+          } as Note);
+        });
+        setNotes(notesData);
+      }, (error) => {
+        console.error("Firestore snapshot error:", error);
+        toast({
+            title: "Error loading notes",
+            description: "Could not load notes from the cloud.",
+            variant: "destructive"
+        })
+      });
+
+      return () => unsubscribe();
+    } else {
+      setNotes(getLocalNotes());
+    }
+  }, [user, loading, getLocalNotes, migrateLocalNotesToFirestore, toast]);
 
   const bringToFront = (id: string) => {
-    const noteRef = doc(firestore, "notes", id);
-    const maxZIndex = Math.max(0, ...notes.map((n) => n.zIndex || 0));
-    updateDoc(noteRef, { zIndex: maxZIndex + 1 });
+    if (user) {
+        const noteRef = doc(firestore, "notes", id);
+        const maxZIndex = Math.max(0, ...notes.map((n) => n.zIndex || 0));
+        updateDoc(noteRef, { zIndex: maxZIndex + 1 });
+    } else {
+        const maxZIndex = Math.max(0, ...notes.map((n) => n.zIndex || 0));
+        const updatedNotes = notes.map(note => note.id === id ? {...note, zIndex: maxZIndex + 1} : note);
+        setNotes(updatedNotes);
+        saveLocalNotes(updatedNotes);
+    }
   };
 
   const addNote = async (
@@ -71,29 +121,51 @@ export default function Home() {
       "id" | "createdAt" | "updatedAt" | "position" | "zIndex" | "userId"
     >
   ) => {
-    if (!user) return;
 
-    const maxZIndex = Math.max(0, ...notes.map((n) => n.zIndex));
-    const newNote: Omit<Note, "id"> = {
+    const maxZIndex = Math.max(0, ...notes.map((n) => n.zIndex || 0));
+    const newNote: Omit<Note, "id" | "userId"> = {
       ...newNoteData,
-      userId: user.uid,
       position: { x: 200, y: 150 },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       zIndex: maxZIndex + 2,
     };
-    await addDoc(collection(firestore, "notes"), newNote);
+
+    if (user) {
+      await addDoc(collection(firestore, "notes"), { ...newNote, userId: user.uid });
+    } else {
+      const localNote: Note = {
+          ...newNote,
+          id: new Date().getTime().toString(),
+          userId: 'local'
+      }
+      const updatedNotes = [...notes, localNote];
+      setNotes(updatedNotes);
+      saveLocalNotes(updatedNotes);
+    }
   };
 
   const updateNote = async (updatedNote: Partial<Note> & { id: string }) => {
-    const { id, ...data } = updatedNote;
-    const noteRef = doc(firestore, "notes", id);
-    await updateDoc(noteRef, { ...data, updatedAt: new Date().toISOString() });
+    if (user) {
+        const { id, ...data } = updatedNote;
+        const noteRef = doc(firestore, "notes", id);
+        await updateDoc(noteRef, { ...data, updatedAt: new Date().toISOString() });
+    } else {
+        const updatedNotes = notes.map(note => note.id === updatedNote.id ? {...note, ...updatedNote, updatedAt: new Date().toISOString()} : note);
+        setNotes(updatedNotes);
+        saveLocalNotes(updatedNotes);
+    }
   };
 
   const deleteNote = async (id: string) => {
-    const noteRef = doc(firestore, "notes", id);
-    await deleteDoc(noteRef);
+    if (user) {
+        const noteRef = doc(firestore, "notes", id);
+        await deleteDoc(noteRef);
+    } else {
+        const updatedNotes = notes.filter(note => note.id !== id);
+        setNotes(updatedNotes);
+        saveLocalNotes(updatedNotes);
+    }
   };
 
   const handleMouseDown = (e: React.MouseEvent, id: string) => {
@@ -151,7 +223,7 @@ export default function Home() {
     document.removeEventListener("mouseup", handleMouseUp);
   };
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <div className="flex h-screen w-screen items-center justify-center">
         <p>Loading...</p>
