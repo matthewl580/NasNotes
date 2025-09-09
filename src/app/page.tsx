@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import type { Note } from "@/lib/types";
 import { NoteCard } from "@/components/NoteCard";
 import { NewNoteForm } from "@/components/NewNoteForm";
@@ -23,6 +23,9 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
   const [notes, setNotes] = useState<Note[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const draggedNoteRef =
     useRef<{ id: string; offset: { x: number; y: number } } | null>(null);
@@ -84,6 +87,7 @@ export default function Home() {
             ...data,
             position: data.position || { x: 100, y: 100 },
             zIndex: data.zIndex || 0,
+            tags: data.tags || [],
           } as Note);
         });
         setNotes(notesData);
@@ -98,18 +102,29 @@ export default function Home() {
 
       return () => unsubscribe();
     } else {
-      setNotes(getLocalNotes());
+      setNotes(getLocalNotes().map(n => ({...n, tags: n.tags || []})));
     }
   }, [user, loading, getLocalNotes, migrateLocalNotesToFirestore, toast]);
+  
+  const filteredNotes = useMemo(() => {
+    return notes.filter(note => {
+      const matchesSearch =
+        note.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        note.content.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesTag = activeTag ? note.tags?.includes(activeTag) : true;
+      return matchesSearch && matchesTag;
+    });
+  }, [notes, searchQuery, activeTag]);
 
   const bringToFront = (id: string) => {
+    const maxZIndex = Math.max(0, ...notes.map((n) => n.zIndex || 0));
+    const newZIndex = maxZIndex + 1;
+
     if (user) {
         const noteRef = doc(firestore, "notes", id);
-        const maxZIndex = Math.max(0, ...notes.map((n) => n.zIndex || 0));
-        updateDoc(noteRef, { zIndex: maxZIndex + 1 });
+        updateDoc(noteRef, { zIndex: newZIndex });
     } else {
-        const maxZIndex = Math.max(0, ...notes.map((n) => n.zIndex || 0));
-        const updatedNotes = notes.map(note => note.id === id ? {...note, zIndex: maxZIndex + 1} : note);
+        const updatedNotes = notes.map(note => note.id === id ? {...note, zIndex: newZIndex} : note);
         setNotes(updatedNotes);
         saveLocalNotes(updatedNotes);
     }
@@ -118,7 +133,7 @@ export default function Home() {
   const addNote = async (
     newNoteData: Omit<
       Note,
-      "id" | "createdAt" | "updatedAt" | "position" | "zIndex" | "userId"
+      "id" | "createdAt" | "updatedAt" | "position" | "zIndex" | "userId" | "tags"
     >
   ) => {
 
@@ -129,6 +144,7 @@ export default function Home() {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       zIndex: maxZIndex + 2,
+      tags: [],
     };
 
     if (user) {
@@ -146,16 +162,27 @@ export default function Home() {
   };
 
   const updateNote = async (updatedNote: Partial<Note> & { id: string }) => {
+    const noteToUpdate = notes.find(n => n.id === updatedNote.id);
+    if (!noteToUpdate) return;
+  
+    const dataToUpdate: Partial<Note> & {updatedAt: string} = {
+      ...updatedNote,
+      updatedAt: new Date().toISOString(),
+    };
+  
     if (user) {
-        const { id, ...data } = updatedNote;
-        const noteRef = doc(firestore, "notes", id);
-        await updateDoc(noteRef, { ...data, updatedAt: new Date().toISOString() });
+      const { id, ...data } = dataToUpdate;
+      const noteRef = doc(firestore, "notes", id);
+      await updateDoc(noteRef, data);
     } else {
-        const updatedNotes = notes.map(note => note.id === updatedNote.id ? {...note, ...updatedNote, updatedAt: new Date().toISOString()} : note);
-        setNotes(updatedNotes);
-        saveLocalNotes(updatedNotes);
+      const updatedNotes = notes.map((note) =>
+        note.id === updatedNote.id ? { ...note, ...dataToUpdate } : note
+      );
+      setNotes(updatedNotes);
+      saveLocalNotes(updatedNotes);
     }
   };
+  
 
   const deleteNote = async (id: string) => {
     if (user) {
@@ -170,7 +197,7 @@ export default function Home() {
 
   const handleMouseDown = (e: React.MouseEvent, id: string) => {
     const target = e.target as HTMLElement;
-    if (!target.closest(".drag-handle")) return;
+    if (target.closest('.resize-handle') || !target.closest(".drag-handle")) return;
 
     const note = notes.find((n) => n.id === id);
     const cardElement = (e.currentTarget as HTMLElement).closest(
@@ -196,12 +223,19 @@ export default function Home() {
     const { id, offset } = draggedNoteRef.current;
 
     const containerRect = containerRef.current.getBoundingClientRect();
+    const note = notes.find(n => n.id === id);
+    if (!note) return;
+
+    const noteWidth = note.width || 320;
+    const noteHeight = note.height || 'auto';
+
 
     let newX = e.clientX - offset.x - containerRect.left;
     let newY = e.clientY - offset.y - containerRect.top;
 
-    newX = Math.max(0, Math.min(newX, containerRect.width - 320));
-    newY = Math.max(80, Math.min(newY, containerRect.height - 200));
+    newX = Math.max(0, Math.min(newX, containerRect.width - noteWidth));
+    newY = Math.max(80, Math.min(newY, containerRect.height - (typeof noteHeight === 'number' ? noteHeight : 200)));
+
 
     setNotes((prevNotes) =>
       prevNotes.map((n) =>
@@ -236,10 +270,17 @@ export default function Home() {
       ref={containerRef}
       className="h-screen w-screen overflow-hidden relative"
     >
-      <Header notes={notes} onNoteAdd={addNote} />
+      <Header 
+        notes={notes} 
+        onNoteAdd={addNote} 
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        activeTag={activeTag}
+        setActiveTag={setActiveTag}
+      />
       <div className="relative w-full h-full pt-20">
         <NewNoteForm onAdd={addNote} defaultPosition={{ x: 60, y: 40 }} />
-        {notes.map((note) => (
+        {filteredNotes.map((note) => (
           <NoteCard
             key={note.id}
             note={note}

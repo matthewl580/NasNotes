@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import type { Note } from "@/lib/types";
 import {
   Card,
@@ -23,6 +23,8 @@ import {
   Sparkles,
   Loader2,
   GripVertical,
+  Tag,
+  X,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -48,6 +50,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { Badge } from "./ui/badge";
 
 interface NoteCardProps {
   note: Note;
@@ -78,6 +81,11 @@ export function NoteCard({
   const [editedContent, setEditedContent] = useState(note.content);
   const [isDrawingOpen, setIsDrawingOpen] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [tagInput, setTagInput] = useState("");
+
+  const resizeHandleRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const isResizingRef = useRef(false);
 
   const { toast } = useToast();
 
@@ -86,7 +94,6 @@ export function NoteCard({
       id: note.id,
       title: editedTitle,
       content: editedContent,
-      updatedAt: new Date().toISOString(),
     });
     setIsEditing(false);
   };
@@ -98,7 +105,6 @@ export function NoteCard({
       onUpdate({
         id: note.id,
         content: result.summary,
-        updatedAt: new Date().toISOString(),
       });
       setEditedContent(result.summary);
       toast({
@@ -126,10 +132,29 @@ export function NoteCard({
   const handleSaveDrawing = (dataUrl: string) => {
     onUpdate({ id: note.id, drawingUrl: dataUrl });
   };
+  
+  const handleTagInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTagInput(e.target.value);
+  }
+  
+  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && tagInput.trim() !== '') {
+      e.preventDefault();
+      const newTags = [...(note.tags || []), tagInput.trim()];
+      onUpdate({ id: note.id, tags: newTags });
+      setTagInput('');
+    }
+  };
+  
+  const removeTag = (tagToRemove: string) => {
+    const newTags = (note.tags || []).filter(tag => tag !== tagToRemove);
+    onUpdate({ id: note.id, tags: newTags });
+  }
 
   return (
     <>
       <Card
+        ref={cardRef}
         onMouseDown={onMouseDown}
         onClick={() => onSelect(note.id)}
         className={cn(
@@ -140,6 +165,8 @@ export function NoteCard({
           left: `${note.position.x}px`,
           top: `${note.position.y}px`,
           zIndex: note.zIndex,
+          width: note.width ? `${note.width}px` : undefined,
+          height: note.height ? `${note.height}px` : undefined,
         }}
       >
         <CardHeader className="relative pb-2">
@@ -213,73 +240,95 @@ export function NoteCard({
             </div>
           )}
         </CardContent>
-        <CardFooter className="flex justify-between">
-          <div className="flex items-center gap-1">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Palette className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                {noteColors.map((color) => (
-                  <DropdownMenuItem
-                    key={color}
-                    onClick={() => onUpdate({ id: note.id, color })}
-                  >
-                    <div
-                      className={`w-4 h-4 rounded-full mr-2 ${color} border`}
-                    />
-                    <span>{color.split("-")[1] || "white"}</span>
-                  </DropdownMenuItem>
+        <CardFooter className="flex flex-col items-start gap-2">
+            <div className="flex flex-wrap gap-2">
+                {(note.tags || []).map(tag => (
+                    <Badge key={tag} variant="secondary">
+                        {tag}
+                        <button onClick={() => removeTag(tag)} className="ml-1 -mr-1 rounded-full p-0.5 hover:bg-background/50">
+                            <X className="h-3 w-3" />
+                        </button>
+                    </Badge>
                 ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button variant="ghost" size="icon" onClick={handleAddImage}>
-              <ImageIcon className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsDrawingOpen(true)}>
-              <PenSquare className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleSummarize}
-              disabled={isSummarizing}
-            >
-              {isSummarizing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Sparkles className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
+            </div>
+            <div className="relative w-full">
+                <Tag className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input 
+                    value={tagInput}
+                    onChange={handleTagInputChange}
+                    onKeyDown={handleTagInputKeyDown}
+                    placeholder="Add a tag..."
+                    className="pl-8 h-8 text-xs"
+                />
+            </div>
+          <div className="flex justify-between w-full">
+            <div className="flex items-center gap-1">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <Palette className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  {noteColors.map((color) => (
+                    <DropdownMenuItem
+                      key={color}
+                      onClick={() => onUpdate({ id: note.id, color })}
+                    >
+                      <div
+                        className={`w-4 h-4 rounded-full mr-2 ${color} border`}
+                      />
+                      <span>{color.split("-")[1] || "white"}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button variant="ghost" size="icon" onClick={handleAddImage}>
+                <ImageIcon className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => setIsDrawingOpen(true)}>
+                <PenSquare className="h-4 w-4" />
+              </Button>
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-destructive hover:text-destructive"
+                onClick={handleSummarize}
+                disabled={isSummarizing}
               >
-                <Trash2 className="h-4 w-4" />
+                {isSummarizing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
               </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete
-                  your note.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => onDelete(note.id)}>
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+            </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete
+                    your note.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => onDelete(note.id)}>
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </CardFooter>
       </Card>
       <DrawingCanvas

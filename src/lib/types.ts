@@ -11,4 +11,7 @@ export type Note = {
   updatedAt:string;
   zIndex: number;
   userId: string;
+  tags?: string[];
+  width?: number;
+  height?: number;
 };
