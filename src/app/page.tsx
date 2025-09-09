@@ -16,7 +16,6 @@ import {
   deleteDoc,
   doc,
   writeBatch,
-  getDocs,
 } from "firebase/firestore";
 import { firestore } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
@@ -119,13 +118,14 @@ export default function Home() {
   const bringToFront = (id: string) => {
     const maxZIndex = Math.max(0, ...notes.map((n) => n.zIndex || 0));
     const newZIndex = maxZIndex + 1;
+    
+    const updatedNotes = notes.map(note => note.id === id ? {...note, zIndex: newZIndex} : note);
+    setNotes(updatedNotes);
 
     if (user) {
         const noteRef = doc(firestore, "notes", id);
         updateDoc(noteRef, { zIndex: newZIndex });
     } else {
-        const updatedNotes = notes.map(note => note.id === id ? {...note, zIndex: newZIndex} : note);
-        setNotes(updatedNotes);
         saveLocalNotes(updatedNotes);
     }
   };
@@ -165,9 +165,12 @@ export default function Home() {
     const noteToUpdate = notes.find(n => n.id === updatedNote.id);
     if (!noteToUpdate) return;
   
-    const dataToUpdate: Partial<Note> & {updatedAt: string} = {
+    // Only update timestamp if it's not just a position change
+    const isOnlyPositionChange = Object.keys(updatedNote).length === 2 && 'id' in updatedNote && 'position' in updatedNote;
+    
+    const dataToUpdate: Partial<Note> = {
       ...updatedNote,
-      updatedAt: new Date().toISOString(),
+      updatedAt: isOnlyPositionChange ? noteToUpdate.updatedAt : new Date().toISOString(),
     };
   
     if (user) {
@@ -244,12 +247,12 @@ export default function Home() {
     );
   };
 
-  const handleMouseUp = async () => {
+  const handleMouseUp = () => {
     if (draggedNoteRef.current) {
       const { id } = draggedNoteRef.current;
       const note = notes.find((n) => n.id === id);
       if (note) {
-        await updateNote({ id: note.id, position: note.position });
+        updateNote({ id: note.id, position: note.position });
       }
     }
     draggedNoteRef.current = null;

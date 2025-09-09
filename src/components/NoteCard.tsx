@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import type { Note } from "@/lib/types";
 import {
   Card,
@@ -83,11 +83,17 @@ export function NoteCard({
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [tagInput, setTagInput] = useState("");
 
-  const resizeHandleRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const isResizingRef = useRef(false);
+  const startSize = useRef({ width: 0, height: 0 });
+  const startPosition = useRef({ x: 0, y: 0 });
 
   const { toast } = useToast();
+
+  useEffect(() => {
+    setEditedTitle(note.title || "");
+    setEditedContent(note.content);
+  }, [note.title, note.content]);
 
   const handleSave = () => {
     onUpdate({
@@ -151,6 +157,40 @@ export function NoteCard({
     onUpdate({ id: note.id, tags: newTags });
   }
 
+  const handleResizeMouseDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    isResizingRef.current = true;
+    startSize.current = { width: cardRef.current?.offsetWidth || 0, height: cardRef.current?.offsetHeight || 0 };
+    startPosition.current = { x: e.clientX, y: e.clientY };
+
+    document.addEventListener('mousemove', handleResizeMouseMove);
+    document.addEventListener('mouseup', handleResizeMouseUp);
+  };
+
+  const handleResizeMouseMove = (e: MouseEvent) => {
+    if (!isResizingRef.current || !cardRef.current) return;
+    const dx = e.clientX - startPosition.current.x;
+    const dy = e.clientY - startPosition.current.y;
+    const newWidth = Math.max(200, startSize.current.width + dx);
+    const newHeight = Math.max(150, startSize.current.height + dy);
+    cardRef.current.style.width = `${newWidth}px`;
+    cardRef.current.style.height = `${newHeight}px`;
+  };
+
+  const handleResizeMouseUp = () => {
+    isResizingRef.current = false;
+    document.removeEventListener('mousemove', handleResizeMouseMove);
+    document.removeEventListener('mouseup', handleResizeMouseUp);
+    if (cardRef.current) {
+        onUpdate({
+            id: note.id,
+            width: cardRef.current.offsetWidth,
+            height: cardRef.current.offsetHeight,
+        });
+    }
+  };
+
+
   return (
     <>
       <Card
@@ -158,15 +198,17 @@ export function NoteCard({
         onMouseDown={onMouseDown}
         onClick={() => onSelect(note.id)}
         className={cn(
-          "w-80 absolute transform transition-shadow duration-150 ease-in-out shadow-lg hover:shadow-2xl",
+          "w-80 absolute transform transition-shadow duration-150 ease-in-out shadow-lg hover:shadow-2xl flex flex-col",
           note.color
         )}
         style={{
           left: `${note.position.x}px`,
           top: `${note.position.y}px`,
           zIndex: note.zIndex,
-          width: note.width ? `${note.width}px` : undefined,
-          height: note.height ? `${note.height}px` : undefined,
+          width: note.width ? `${note.width}px` : '320px',
+          height: note.height ? `${note.height}px` : 'auto',
+          minHeight: '200px',
+          minWidth: '220px',
         }}
       >
         <CardHeader className="relative pb-2">
@@ -200,13 +242,13 @@ export function NoteCard({
             {new Date(note.updatedAt).toLocaleString()}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-grow overflow-y-auto">
           {isEditing ? (
             <Textarea
               value={editedContent}
               onChange={(e) => setEditedContent(e.target.value)}
               rows={6}
-              className="w-full"
+              className="w-full h-full"
             />
           ) : (
             <div className="prose">
@@ -240,12 +282,12 @@ export function NoteCard({
             </div>
           )}
         </CardContent>
-        <CardFooter className="flex flex-col items-start gap-2">
+        <CardFooter className="flex flex-col items-start gap-2 pt-2">
             <div className="flex flex-wrap gap-2">
                 {(note.tags || []).map(tag => (
                     <Badge key={tag} variant="secondary">
                         {tag}
-                        <button onClick={() => removeTag(tag)} className="ml-1 -mr-1 rounded-full p-0.5 hover:bg-background/50">
+                        <button onClick={(e) => {e.stopPropagation(); removeTag(tag)}} className="ml-1 -mr-1 rounded-full p-0.5 hover:bg-background/50">
                             <X className="h-3 w-3" />
                         </button>
                     </Badge>
@@ -330,6 +372,10 @@ export function NoteCard({
             </AlertDialog>
           </div>
         </CardFooter>
+        <div 
+          className="resize-handle absolute bottom-0 right-0 w-4 h-4 cursor-se-resize" 
+          onMouseDown={handleResizeMouseDown}
+        />
       </Card>
       <DrawingCanvas
         isOpen={isDrawingOpen}
