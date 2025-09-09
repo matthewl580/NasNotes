@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
@@ -158,6 +159,7 @@ export function NoteCard({
   }
 
   const handleResizeMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     isResizingRef.current = true;
     startSize.current = { width: cardRef.current?.offsetWidth || 0, height: cardRef.current?.offsetHeight || 0 };
@@ -173,8 +175,11 @@ export function NoteCard({
     const dy = e.clientY - startPosition.current.y;
     const newWidth = Math.max(200, startSize.current.width + dx);
     const newHeight = Math.max(150, startSize.current.height + dy);
-    cardRef.current.style.width = `${newWidth}px`;
-    cardRef.current.style.height = `${newHeight}px`;
+    onUpdate({
+        id: note.id,
+        width: newWidth,
+        height: newHeight,
+    });
   };
 
   const handleResizeMouseUp = () => {

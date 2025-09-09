@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
@@ -165,24 +166,25 @@ export default function Home() {
     const noteToUpdate = notes.find(n => n.id === updatedNote.id);
     if (!noteToUpdate) return;
   
-    // Only update timestamp if it's not just a position change
-    const isOnlyPositionChange = Object.keys(updatedNote).length === 2 && 'id' in updatedNote && 'position' in updatedNote;
-    
-    const dataToUpdate: Partial<Note> = {
+    const isPositionChange = Object.keys(updatedNote).length === 2 && 'id' in updatedNote && 'position' in updatedNote;
+    const isResizeChange = Object.keys(updatedNote).length === 3 && 'id' in updatedNote && 'width' in updatedNote && 'height' in updatedNote;
+
+    const dataToUpdate: Partial<Note> & {id: string} = {
       ...updatedNote,
-      updatedAt: isOnlyPositionChange ? noteToUpdate.updatedAt : new Date().toISOString(),
+      updatedAt: isPositionChange || isResizeChange ? noteToUpdate.updatedAt : new Date().toISOString(),
     };
+
+    const newNotes = notes.map((note) =>
+        note.id === updatedNote.id ? { ...note, ...dataToUpdate } : note
+      );
+    setNotes(newNotes);
   
     if (user) {
       const { id, ...data } = dataToUpdate;
       const noteRef = doc(firestore, "notes", id);
       await updateDoc(noteRef, data);
     } else {
-      const updatedNotes = notes.map((note) =>
-        note.id === updatedNote.id ? { ...note, ...dataToUpdate } : note
-      );
-      setNotes(updatedNotes);
-      saveLocalNotes(updatedNotes);
+      saveLocalNotes(newNotes);
     }
   };
   
