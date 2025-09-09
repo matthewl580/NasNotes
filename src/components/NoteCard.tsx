@@ -46,6 +46,8 @@ import { DrawingCanvas } from "./DrawingCanvas";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface NoteCardProps {
   note: Note;
@@ -180,7 +182,11 @@ export function NoteCard({
               className="w-full"
             />
           ) : (
-            <p className="text-sm whitespace-pre-wrap">{note.content}</p>
+            <div className="prose">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {note.content}
+              </ReactMarkdown>
+            </div>
           )}
           {note.imageUrl && (
             <div className="mt-4">

@@ -4,25 +4,25 @@
 
 @layer base {
   :root {
-    --background: 208 100% 97%; /* #F0F8FF Alice Blue */
-    --foreground: 210 14% 20%;
+    --background: 250 60% 98%;
+    --foreground: 224 71% 4%;
     --card: 0 0% 100%;
-    --card-foreground: 210 14% 20%;
+    --card-foreground: 224 71% 4%;
     --popover: 0 0% 100%;
-    --popover-foreground: 210 14% 20%;
-    --primary: 210 14% 60%; /* #778899 Light Slate Gray */
+    --popover-foreground: 224 71% 4%;
+    --primary: 260 70% 60%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 15% 90%;
-    --secondary-foreground: 210 14% 20%;
-    --muted: 210 15% 95%;
-    --muted-foreground: 210 10% 45%;
-    --accent: 28 100% 86%; /* #FFDAB9 Peach Puff */
-    --accent-foreground: 28 50% 20%;
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 240 6% 10%;
+    --muted: 240 5% 90%;
+    --muted-foreground: 240 4% 46%;
+    --accent: 350 90% 70%;
+    --accent-foreground: 356 65% 15%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 210 14% 85%;
-    --input: 210 14% 95%;
-    --ring: 210 14% 60%;
+    --border: 240 6% 90%;
+    --input: 240 6% 94%;
+    --ring: 260 70% 60%;
     --radius: 0.5rem;
   }
 
@@ -33,19 +33,19 @@
     --card-foreground: 210 40% 98%;
     --popover: 222 47% 11%;
     --popover-foreground: 210 40% 98%;
-    --primary: 210 14% 70%;
+    --primary: 260 70% 70%;
     --primary-foreground: 222 47% 11%;
     --secondary: 217 33% 17%;
     --secondary-foreground: 210 40% 98%;
     --muted: 217 33% 17%;
     --muted-foreground: 215 20% 65%;
-    --accent: 28 80% 60%;
-    --accent-foreground: 28 10% 15%;
+    --accent: 350 90% 60%;
+    --accent-foreground: 356 65% 15%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
     --border: 217 33% 17%;
     --input: 217 33% 17%;
-    --ring: 210 14% 70%;
+    --ring: 260 70% 70%;
   }
 }
 
@@ -55,5 +55,20 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  .prose {
+      @apply text-foreground text-sm;
+      h1,h2,h3,h4,h5,h6 { @apply font-semibold; }
+      h1 { @apply text-2xl; }
+      h2 { @apply text-xl; }
+      h3 { @apply text-lg; }
+      p { @apply leading-7; }
+      a { @apply text-primary underline; }
+      strong { @apply font-semibold; }
+      ul { @apply list-disc list-inside; }
+      ol { @apply list-decimal list-inside; }
+      code { @apply bg-muted text-muted-foreground rounded-sm px-1 py-0.5 font-code text-xs; }
+      pre { @apply bg-muted p-2 rounded-md overflow-x-auto; }
+      blockquote { @apply border-l-4 border-muted pl-4 italic; }
   }
 }
