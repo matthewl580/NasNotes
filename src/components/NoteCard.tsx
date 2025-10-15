@@ -70,8 +70,6 @@ const noteColors = [
   "bg-violet-500",
 ];
 
-const iconButtonClasses = "bg-black/10 hover:bg-black/20 dark:bg-white/10 dark:hover:bg-white/20";
-
 export function NoteCard({
   note,
   onUpdate,
@@ -92,6 +90,9 @@ export function NoteCard({
   const startPosition = useRef({ x: 0, y: 0 });
 
   const { toast } = useToast();
+
+  const iconButtonClasses = note.color === 'bg-white' ? "bg-black/10 hover:bg-black/20" : "bg-black/10 hover:bg-black/20 dark:bg-white/10 dark:hover:bg-white/20";
+  const iconColorClasses = note.color === 'bg-white' ? "text-black" : "";
 
   useEffect(() => {
     setEditedTitle(note.title || "");
@@ -219,7 +220,7 @@ export function NoteCard({
       >
         <CardHeader className="relative pb-2">
           <div className="absolute top-2 left-2 cursor-move drag-handle p-2 -m-2">
-            <GripVertical className="text-muted-foreground" />
+            <GripVertical className={cn("text-muted-foreground", iconColorClasses)} />
           </div>
           <div className="flex justify-between items-start gap-2 ml-4">
             {isEditing ? (
@@ -235,11 +236,11 @@ export function NoteCard({
             <div className="flex items-center space-x-1 shrink-0">
               {isEditing ? (
                 <Button variant="ghost" size="icon" onClick={handleSave} className={iconButtonClasses}>
-                  <Save className="h-4 w-4" />
+                  <Save className={cn("h-4 w-4", iconColorClasses)} />
                 </Button>
               ) : (
                 <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)} className={iconButtonClasses}>
-                  <Edit className="h-4 w-4" />
+                  <Edit className={cn("h-4 w-4", iconColorClasses)} />
                 </Button>
               )}
             </div>
@@ -300,7 +301,7 @@ export function NoteCard({
                 ))}
             </div>
             <div className="relative w-full">
-                <Tag className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Tag className={cn("absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground", iconColorClasses)} />
                 <Input 
                     value={tagInput}
                     onChange={handleTagInputChange}
@@ -314,7 +315,7 @@ export function NoteCard({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className={iconButtonClasses}>
-                    <Palette className="h-4 w-4" />
+                    <Palette className={cn("h-4 w-4", iconColorClasses)} />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
@@ -332,10 +333,10 @@ export function NoteCard({
                 </DropdownMenuContent>
               </DropdownMenu>
               <Button variant="ghost" size="icon" onClick={handleAddImage} className={iconButtonClasses}>
-                <ImageIcon className="h-4 w-4" />
+                <ImageIcon className={cn("h-4 w-4", iconColorClasses)} />
               </Button>
               <Button variant="ghost" size="icon" onClick={() => setIsDrawingOpen(true)} className={iconButtonClasses}>
-                <PenSquare className="h-4 w-4" />
+                <PenSquare className={cn("h-4 w-4", iconColorClasses)} />
               </Button>
               <Button
                 variant="ghost"
@@ -345,9 +346,9 @@ export function NoteCard({
                 className={iconButtonClasses}
               >
                 {isSummarizing ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className={cn("h-4 w-4 animate-spin", iconColorClasses)} />
                 ) : (
-                  <Sparkles className="h-4 w-4" />
+                  <Sparkles className={cn("h-4 w-4", iconColorClasses)} />
                 )}
               </Button>
             </div>
@@ -358,7 +359,7 @@ export function NoteCard({
                   size="icon"
                   className={cn("text-destructive hover:text-destructive", iconButtonClasses)}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className={cn("h-4 w-4", iconColorClasses)} />
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
@@ -384,12 +385,12 @@ export function NoteCard({
           onMouseDown={handleResizeMouseDown}
         />
       </Card>
-      <DrawingCanvas
+      {isDrawingOpen && <DrawingCanvas
         isOpen={isDrawingOpen}
         onClose={() => setIsDrawingOpen(false)}
         onSave={handleSaveDrawing}
         existingDrawing={note.drawingUrl}
-      />
+      />}
     </>
   );
 }

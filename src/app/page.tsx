@@ -169,12 +169,9 @@ export default function Home() {
     const noteToUpdate = notes.find(n => n.id === updatedNote.id);
     if (!noteToUpdate) return;
   
-    const isPositionChange = Object.keys(updatedNote).length === 2 && 'id' in updatedNote && 'position' in updatedNote;
-    const isResizeChange = Object.keys(updatedNote).length === 3 && 'id' in updatedNote && 'width' in updatedNote && 'height' in updatedNote;
-
     const dataToUpdate: Partial<Note> = {
       ...updatedNote,
-      updatedAt: isPositionChange || isResizeChange ? noteToUpdate.updatedAt : new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
     
     // remove id from dataToUpdate to avoid sending it to firestore
