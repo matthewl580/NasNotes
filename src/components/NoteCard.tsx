@@ -91,8 +91,10 @@ export function NoteCard({
 
   const { toast } = useToast();
 
-  const iconButtonClasses = note.color === 'bg-white' ? "bg-black/10 hover:bg-black/20" : "bg-black/10 hover:bg-black/20 dark:bg-white/10 dark:hover:bg-white/20";
-  const iconColorClasses = note.color === 'bg-white' ? "text-black" : "";
+  const iconButtonClasses = "bg-black/10 hover:bg-black/20 dark:bg-white/10 dark:hover:bg-white/20";
+  const iconColorClasses = note.color === 'bg-white' ? "text-black" : "text-white";
+  const textColorClasses = note.color === 'bg-white' ? "text-black" : "text-white";
+  const proseClasses = note.color === 'bg-white' ? "prose" : "prose prose-invert";
 
   useEffect(() => {
     setEditedTitle(note.title || "");
@@ -228,10 +230,10 @@ export function NoteCard({
                 value={editedTitle}
                 onChange={(e) => setEditedTitle(e.target.value)}
                 placeholder="Note Title"
-                className="text-lg font-bold"
+                className={cn("text-lg font-bold", textColorClasses, "placeholder:text-gray-300")}
               />
             ) : (
-              <CardTitle className="pt-1">{note.title || "Note"}</CardTitle>
+              <CardTitle className={cn("pt-1", textColorClasses)}>{note.title || "Note"}</CardTitle>
             )}
             <div className="flex items-center space-x-1 shrink-0">
               {isEditing ? (
@@ -245,7 +247,7 @@ export function NoteCard({
               )}
             </div>
           </div>
-          <CardDescription className="ml-4">
+          <CardDescription className={cn("ml-4", textColorClasses, "opacity-80")}>
             {new Date(note.updatedAt).toLocaleString()}
           </CardDescription>
         </CardHeader>
@@ -255,10 +257,10 @@ export function NoteCard({
               value={editedContent}
               onChange={(e) => setEditedContent(e.target.value)}
               rows={6}
-              className="w-full h-full"
+              className={cn("w-full h-full", textColorClasses)}
             />
           ) : (
-            <div className="prose dark:prose-invert">
+            <div className={proseClasses}>
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {note.content}
               </ReactMarkdown>
@@ -394,3 +396,5 @@ export function NoteCard({
     </>
   );
 }
+
+    
