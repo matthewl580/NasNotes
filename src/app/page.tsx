@@ -251,13 +251,23 @@ export default function Home() {
     );
   };
 
-  const handleMouseUp = () => {
-    if (draggedNoteRef.current) {
-      const { id } = draggedNoteRef.current;
-      const note = notes.find((n) => n.id === id);
-      if (note) {
-        updateNote({ id: note.id, position: note.position });
-      }
+  const handleMouseUp = (e: MouseEvent) => {
+    if (draggedNoteRef.current && containerRef.current) {
+        const { id, offset } = draggedNoteRef.current;
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const note = notes.find(n => n.id === id);
+        if (note) {
+            const noteWidth = note.width || 320;
+            const noteHeight = note.height || 'auto';
+
+            let newX = e.clientX - offset.x - containerRect.left;
+            let newY = e.clientY - offset.y - containerRect.top;
+
+            newX = Math.max(0, Math.min(newX, containerRect.width - noteWidth));
+            newY = Math.max(80, Math.min(newY, containerRect.height - (typeof noteHeight === 'number' ? noteHeight : 200)));
+            
+            updateNote({ id: note.id, position: { x: newX, y: newY } });
+        }
     }
     draggedNoteRef.current = null;
     document.removeEventListener("mousemove", handleMouseMove);

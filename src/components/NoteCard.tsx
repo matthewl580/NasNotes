@@ -63,11 +63,11 @@ interface NoteCardProps {
 
 const noteColors = [
   "bg-white",
-  "bg-rose-100",
-  "bg-amber-100",
-  "bg-emerald-100",
-  "bg-sky-100",
-  "bg-violet-100",
+  "bg-rose-200",
+  "bg-amber-200",
+  "bg-emerald-200",
+  "bg-sky-200",
+  "bg-violet-200",
 ];
 
 export function NoteCard({
