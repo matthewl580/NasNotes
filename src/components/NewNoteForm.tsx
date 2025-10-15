@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from "react";
@@ -33,11 +34,11 @@ export function NewNoteForm({ onAdd, defaultPosition }: NewNoteFormProps) {
 
   return (
     <div
-      className="absolute"
+      className="fixed"
       style={{
         left: `${defaultPosition.x}px`,
         top: `${defaultPosition.y}px`,
-        zIndex: 0,
+        zIndex: 10000,
       }}
     >
       <Card className="w-80 shadow-lg bg-background border-2 border-dashed">

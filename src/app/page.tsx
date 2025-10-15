@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
@@ -144,7 +145,7 @@ export default function Home() {
     const maxZIndex = Math.max(0, ...notes.map((n) => n.zIndex || 0));
     const newNote: Omit<Note, "id" | "userId"> = {
       ...newNoteData,
-      position: { x: 200, y: 150 },
+      position: { x: 200, y: 200 },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       zIndex: maxZIndex + 2,
@@ -210,17 +211,13 @@ export default function Home() {
     if (target.closest('.resize-handle') || !target.closest(".drag-handle")) return;
 
     const note = notes.find((n) => n.id === id);
-    const cardElement = (e.currentTarget as HTMLElement).closest(
-      'div[style*="left"]'
-    );
-    if (!note || !cardElement) return;
+    if (!note) return;
 
     bringToFront(id);
 
-    const rect = cardElement.getBoundingClientRect();
     const offset = {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
+      x: e.clientX - note.position.x,
+      y: e.clientY - note.position.y,
     };
     draggedNoteRef.current = { id, offset };
 
@@ -232,20 +229,8 @@ export default function Home() {
     if (!draggedNoteRef.current || !containerRef.current) return;
     const { id, offset } = draggedNoteRef.current;
 
-    const containerRect = containerRef.current.getBoundingClientRect();
-    const note = notes.find(n => n.id === id);
-    if (!note) return;
-
-    const noteWidth = note.width || 320;
-    const noteHeight = note.height || 'auto';
-
-
-    let newX = e.clientX - offset.x - containerRect.left;
-    let newY = e.clientY - offset.y - containerRect.top;
-
-    newX = Math.max(0, Math.min(newX, containerRect.width - noteWidth));
-    newY = Math.max(80, Math.min(newY, containerRect.height - (typeof noteHeight === 'number' ? noteHeight : 200)));
-
+    const newX = e.clientX - offset.x;
+    const newY = e.clientY - offset.y;
 
     setNotes((prevNotes) =>
       prevNotes.map((n) =>
@@ -257,17 +242,10 @@ export default function Home() {
   const handleMouseUp = (e: MouseEvent) => {
     if (draggedNoteRef.current && containerRef.current) {
         const { id, offset } = draggedNoteRef.current;
-        const containerRect = containerRef.current.getBoundingClientRect();
         const note = notes.find(n => n.id === id);
         if (note) {
-            const noteWidth = note.width || 320;
-            const noteHeight = note.height || 'auto';
-
-            let newX = e.clientX - offset.x - containerRect.left;
-            let newY = e.clientY - offset.y - containerRect.top;
-
-            newX = Math.max(0, Math.min(newX, containerRect.width - noteWidth));
-            newY = Math.max(80, Math.min(newY, containerRect.height - (typeof noteHeight === 'number' ? noteHeight : 200)));
+            const newX = e.clientX - offset.x;
+            const newY = e.clientY - offset.y;
             
             updateNote({ id: note.id, position: { x: newX, y: newY } });
         }
@@ -298,8 +276,8 @@ export default function Home() {
         activeTag={activeTag}
         setActiveTag={setActiveTag}
       />
-      <div className="relative w-full h-full pt-20">
-        <NewNoteForm onAdd={addNote} defaultPosition={{ x: 60, y: 40 }} />
+      <div className="relative w-full h-full pt-36">
+        <NewNoteForm onAdd={addNote} defaultPosition={{ x: 40, y: 150 }} />
         {filteredNotes.map((note) => (
           <NoteCard
             key={note.id}

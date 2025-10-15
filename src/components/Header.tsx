@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Note } from "@/lib/types";
@@ -31,7 +32,7 @@ export function Header({ notes, onNoteAdd, searchQuery, setSearchQuery, activeTa
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 flex flex-col items-start justify-between p-4 bg-background/80 backdrop-blur-sm border-b gap-4">
+      <header className="fixed top-0 left-0 right-0 z-[10001] flex flex-col items-start justify-between p-4 bg-background/80 backdrop-blur-sm border-b gap-4">
         <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2">
             <Bot className="text-primary" size={28} />
