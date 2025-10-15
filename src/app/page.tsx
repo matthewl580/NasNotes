@@ -124,8 +124,11 @@ export default function Home() {
     setNotes(updatedNotes);
 
     if (user) {
-        const noteRef = doc(firestore, "notes", id);
-        updateDoc(noteRef, { zIndex: newZIndex });
+        const noteToUpdate = notes.find(n => n.id === id);
+        if (noteToUpdate) {
+            const noteRef = doc(firestore, "notes", id);
+            updateDoc(noteRef, { zIndex: newZIndex });
+        }
     } else {
         saveLocalNotes(updatedNotes);
     }

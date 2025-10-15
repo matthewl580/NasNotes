@@ -63,11 +63,11 @@ interface NoteCardProps {
 
 const noteColors = [
   "bg-white",
-  "bg-rose-200",
-  "bg-amber-200",
-  "bg-emerald-200",
-  "bg-sky-200",
-  "bg-violet-200",
+  "bg-rose-500",
+  "bg-amber-500",
+  "bg-emerald-500",
+  "bg-sky-500",
+  "bg-violet-500",
 ];
 
 export function NoteCard({
@@ -197,8 +197,10 @@ export function NoteCard({
     <>
       <Card
         ref={cardRef}
-        onMouseDown={onMouseDown}
-        onClick={() => onSelect(note.id)}
+        onMouseDown={(e) => {
+          onMouseDown(e);
+          onSelect(note.id);
+        }}
         className={cn(
           "w-80 absolute transform transition-shadow duration-150 ease-in-out shadow-lg hover:shadow-2xl flex flex-col",
           note.color
