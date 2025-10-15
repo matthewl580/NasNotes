@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useRef, useEffect, useState } from "react";
@@ -91,7 +92,7 @@ export function DrawingCanvas({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl" style={{ zIndex: 10002 }}>
         <DialogHeader>
           <DialogTitle>Draw Something</DialogTitle>
         </DialogHeader>
@@ -148,3 +149,5 @@ export function DrawingCanvas({
     </Dialog>
   );
 }
+
+    

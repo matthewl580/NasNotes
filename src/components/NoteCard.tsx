@@ -85,16 +85,18 @@ export function NoteCard({
   const [tagInput, setTagInput] = useState("");
 
   const cardRef = useRef<HTMLDivElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const isResizingRef = useRef(false);
   const startSize = useRef({ width: 0, height: 0 });
   const startPosition = useRef({ x: 0, y: 0 });
 
   const { toast } = useToast();
 
-  const iconButtonClasses = "bg-black/10 hover:bg-black/20 dark:bg-white/10 dark:hover:bg-white/20";
-  const iconColorClasses = note.color === 'bg-white' ? "text-black" : "text-white";
-  const textColorClasses = note.color === 'bg-white' ? "text-black" : "text-white";
-  const proseClasses = note.color === 'bg-white' ? "prose" : "prose prose-invert";
+  const isWhiteBg = note.color === 'bg-white';
+  const iconButtonClasses = isWhiteBg ? "bg-gray-200 hover:bg-gray-300" : "bg-black/10 hover:bg-black/20 dark:bg-white/10 dark:hover:bg-white/20";
+  const iconColorClasses = isWhiteBg ? "text-black" : "text-white";
+  const textColorClasses = isWhiteBg ? "text-black" : "text-white";
+  const proseClasses = isWhiteBg ? "prose" : "prose prose-invert";
 
   useEffect(() => {
     setEditedTitle(note.title || "");
@@ -133,11 +135,20 @@ export function NoteCard({
       setIsSummarizing(false);
     }
   };
-
+  
   const handleAddImage = () => {
-    const url = prompt("Enter image URL:");
-    if (url) {
-      onUpdate({ id: note.id, imageUrl: url });
+    imageInputRef.current?.click();
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const dataUrl = event.target?.result as string;
+        onUpdate({ id: note.id, imageUrl: dataUrl });
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -200,6 +211,13 @@ export function NoteCard({
 
   return (
     <>
+      <input
+        type="file"
+        ref={imageInputRef}
+        onChange={handleImageUpload}
+        accept="image/*"
+        style={{ display: "none" }}
+      />
       <Card
         ref={cardRef}
         onMouseDown={(e) => {
@@ -260,7 +278,7 @@ export function NoteCard({
               className={cn("w-full h-full", textColorClasses)}
             />
           ) : (
-            <div className={proseClasses}>
+            <div className={cn(proseClasses, textColorClasses)}>
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {note.content}
               </ReactMarkdown>
