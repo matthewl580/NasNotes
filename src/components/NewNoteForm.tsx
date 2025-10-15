@@ -38,7 +38,7 @@ export function NewNoteForm({ onAdd, defaultPosition }: NewNoteFormProps) {
       style={{
         left: `${defaultPosition.x}px`,
         top: `${defaultPosition.y}px`,
-        zIndex: 10000,
+        zIndex: 1,
       }}
     >
       <Card className="w-80 shadow-lg bg-background border-2 border-dashed">

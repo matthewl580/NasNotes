@@ -338,7 +338,7 @@ export function NoteCard({
                     <Palette className={cn("h-4 w-4", iconColorClasses)} />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent>
+                <DropdownMenuContent style={{ zIndex: 10002 }}>
                   {noteColors.map((color) => (
                     <DropdownMenuItem
                       key={color}
@@ -382,7 +382,7 @@ export function NoteCard({
                   <Trash2 className={cn("h-4 w-4", iconColorClasses)} />
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent>
+              <AlertDialogContent style={{ zIndex: 10002 }}>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                   <AlertDialogDescription>
