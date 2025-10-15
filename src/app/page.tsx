@@ -166,25 +166,29 @@ export default function Home() {
   };
 
   const updateNote = async (updatedNote: Partial<Note> & { id: string }) => {
-    const noteToUpdate = notes.find(n => n.id === updatedNote.id);
+    const noteToUpdate = notes.find((n) => n.id === updatedNote.id);
     if (!noteToUpdate) return;
+  
+    // Determine if only the position is being updated
+    const isOnlyPositionUpdate =
+      Object.keys(updatedNote).length === 2 && "id" in updatedNote && "position" in updatedNote;
   
     const dataToUpdate: Partial<Note> = {
       ...updatedNote,
-      updatedAt: new Date().toISOString(),
+      // Only update the timestamp if it's not just a position change
+      ...(!isOnlyPositionUpdate && { updatedAt: new Date().toISOString() }),
     };
-    
-    // remove id from dataToUpdate to avoid sending it to firestore
-    const { id, ...updateData } = dataToUpdate;
-
+  
     const newNotes = notes.map((note) =>
-        note.id === updatedNote.id ? { ...note, ...dataToUpdate } : note
-      );
+      note.id === updatedNote.id ? { ...note, ...dataToUpdate } : note
+    );
     setNotes(newNotes);
   
     if (user) {
-      const noteRef = doc(firestore, "notes", id);
-      await updateDoc(noteRef, updateData);
+      const noteRef = doc(firestore, "notes", updatedNote.id);
+      // Remove id before sending to firestore
+      const { id, ...updateDataForFirestore } = dataToUpdate;
+      await updateDoc(noteRef, updateDataForFirestore);
     } else {
       saveLocalNotes(newNotes);
     }
