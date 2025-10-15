@@ -28,7 +28,7 @@ export default function Home() {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const draggedNoteRef =
-    useRef<{ id: string; offset: { x: number; y: number } } | null>(null);
+    useRef<{ id: string; offset: { x: number; y: number }; position: { x: number; y: number } } | null>(null);
 
   const { user, loading } = useAuth();
   const { toast } = useToast();
@@ -219,7 +219,7 @@ export default function Home() {
       x: e.clientX - note.position.x,
       y: e.clientY - note.position.y,
     };
-    draggedNoteRef.current = { id, offset };
+    draggedNoteRef.current = { id, offset, position: note.position };
 
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
@@ -232,6 +232,8 @@ export default function Home() {
     const newX = e.clientX - offset.x;
     const newY = e.clientY - offset.y;
 
+    draggedNoteRef.current.position = { x: newX, y: newY };
+
     setNotes((prevNotes) =>
       prevNotes.map((n) =>
         n.id === id ? { ...n, position: { x: newX, y: newY } } : n
@@ -239,13 +241,10 @@ export default function Home() {
     );
   };
 
-  const handleMouseUp = (e: MouseEvent) => {
-    if (draggedNoteRef.current && containerRef.current) {
-        const { id } = draggedNoteRef.current;
-        const note = notes.find(n => n.id === id);
-        if (note) {
-            updateNote({ id: note.id, position: note.position });
-        }
+  const handleMouseUp = () => {
+    if (draggedNoteRef.current) {
+        const { id, position } = draggedNoteRef.current;
+        updateNote({ id, position });
     }
     draggedNoteRef.current = null;
     document.removeEventListener("mousemove", handleMouseMove);
