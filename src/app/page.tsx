@@ -169,10 +169,13 @@ export default function Home() {
     const isPositionChange = Object.keys(updatedNote).length === 2 && 'id' in updatedNote && 'position' in updatedNote;
     const isResizeChange = Object.keys(updatedNote).length === 3 && 'id' in updatedNote && 'width' in updatedNote && 'height' in updatedNote;
 
-    const dataToUpdate: Partial<Note> & {id: string} = {
+    const dataToUpdate: Partial<Note> = {
       ...updatedNote,
       updatedAt: isPositionChange || isResizeChange ? noteToUpdate.updatedAt : new Date().toISOString(),
     };
+    
+    // remove id from dataToUpdate to avoid sending it to firestore
+    const { id, ...updateData } = dataToUpdate;
 
     const newNotes = notes.map((note) =>
         note.id === updatedNote.id ? { ...note, ...dataToUpdate } : note
@@ -180,9 +183,8 @@ export default function Home() {
     setNotes(newNotes);
   
     if (user) {
-      const { id, ...data } = dataToUpdate;
       const noteRef = doc(firestore, "notes", id);
-      await updateDoc(noteRef, data);
+      await updateDoc(noteRef, updateData);
     } else {
       saveLocalNotes(newNotes);
     }

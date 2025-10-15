@@ -7,6 +7,7 @@ import { AuthButton } from "@/components/AuthButton";
 import { Bot, Combine, Search, Tag, X } from "lucide-react";
 import React, { useMemo } from "react";
 import { Input } from "./ui/input";
+import { ModeToggle } from "./ModeToggle";
 
 type HeaderProps = {
   notes: Note[];
@@ -44,6 +45,7 @@ export function Header({ notes, onNoteAdd, searchQuery, setSearchQuery, activeTa
                 Combine Notes
             </Button>
             <AuthButton />
+            <ModeToggle />
             </div>
         </div>
 
