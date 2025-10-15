@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
@@ -142,13 +141,13 @@ export default function Home() {
     >
   ) => {
 
-    const maxZIndex = Math.max(0, ...notes.map((n) => n.zIndex || 0));
+    const maxZIndex = Math.max(10001, ...notes.map((n) => n.zIndex || 0));
     const newNote: Omit<Note, "id" | "userId"> = {
       ...newNoteData,
       position: { x: 200, y: 200 },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      zIndex: maxZIndex + 2,
+      zIndex: maxZIndex + 1,
       tags: [],
     };
 
@@ -196,13 +195,13 @@ export default function Home() {
   
 
   const deleteNote = async (id: string) => {
+    const newNotes = notes.filter(note => note.id !== id);
+    setNotes(newNotes);
     if (user) {
         const noteRef = doc(firestore, "notes", id);
         await deleteDoc(noteRef);
     } else {
-        const updatedNotes = notes.filter(note => note.id !== id);
-        setNotes(updatedNotes);
-        saveLocalNotes(updatedNotes);
+        saveLocalNotes(newNotes);
     }
   };
 
@@ -241,13 +240,10 @@ export default function Home() {
 
   const handleMouseUp = (e: MouseEvent) => {
     if (draggedNoteRef.current && containerRef.current) {
-        const { id, offset } = draggedNoteRef.current;
+        const { id } = draggedNoteRef.current;
         const note = notes.find(n => n.id === id);
         if (note) {
-            const newX = e.clientX - offset.x;
-            const newY = e.clientY - offset.y;
-            
-            updateNote({ id: note.id, position: { x: newX, y: newY } });
+            updateNote({ id: note.id, position: note.position });
         }
     }
     draggedNoteRef.current = null;

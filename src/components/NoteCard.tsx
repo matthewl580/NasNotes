@@ -70,6 +70,8 @@ const noteColors = [
   "bg-violet-500",
 ];
 
+const iconButtonClasses = "bg-black/10 hover:bg-black/20 dark:bg-white/10 dark:hover:bg-white/20";
+
 export function NoteCard({
   note,
   onUpdate,
@@ -232,11 +234,11 @@ export function NoteCard({
             )}
             <div className="flex items-center space-x-1 shrink-0">
               {isEditing ? (
-                <Button variant="ghost" size="icon" onClick={handleSave}>
+                <Button variant="ghost" size="icon" onClick={handleSave} className={iconButtonClasses}>
                   <Save className="h-4 w-4" />
                 </Button>
               ) : (
-                <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)}>
+                <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)} className={iconButtonClasses}>
                   <Edit className="h-4 w-4" />
                 </Button>
               )}
@@ -311,7 +313,7 @@ export function NoteCard({
             <div className="flex items-center gap-1">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
+                  <Button variant="ghost" size="icon" className={iconButtonClasses}>
                     <Palette className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -329,10 +331,10 @@ export function NoteCard({
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button variant="ghost" size="icon" onClick={handleAddImage}>
+              <Button variant="ghost" size="icon" onClick={handleAddImage} className={iconButtonClasses}>
                 <ImageIcon className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" onClick={() => setIsDrawingOpen(true)}>
+              <Button variant="ghost" size="icon" onClick={() => setIsDrawingOpen(true)} className={iconButtonClasses}>
                 <PenSquare className="h-4 w-4" />
               </Button>
               <Button
@@ -340,6 +342,7 @@ export function NoteCard({
                 size="icon"
                 onClick={handleSummarize}
                 disabled={isSummarizing}
+                className={iconButtonClasses}
               >
                 {isSummarizing ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -353,7 +356,7 @@ export function NoteCard({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-destructive hover:text-destructive"
+                  className={cn("text-destructive hover:text-destructive", iconButtonClasses)}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>

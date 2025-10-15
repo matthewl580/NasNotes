@@ -4,7 +4,6 @@
 import type { Note } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { CombineNotesDialog } from "@/components/CombineNotesDialog";
-import { AuthButton } from "@/components/AuthButton";
 import { Bot, Combine, Search, Tag, X } from "lucide-react";
 import React, { useMemo } from "react";
 import { Input } from "./ui/input";
@@ -45,7 +44,6 @@ export function Header({ notes, onNoteAdd, searchQuery, setSearchQuery, activeTa
                 <Combine className="mr-2 h-4 w-4" />
                 Combine Notes
             </Button>
-            <AuthButton />
             <ModeToggle />
             </div>
         </div>
